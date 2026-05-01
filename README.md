@@ -22,6 +22,13 @@ The `SignatureTransfer` contract handles all signature-based transfers, meaning 
 
 The `AllowanceTransfer` contract handles setting allowances on tokens, giving permissions to spenders on a specified amount for a specified duration of time. Any transfers that then happen through the `AllowanceTransfer` contract will only succeed if the proper permissions have been set.
 
+`Permit3` keeps the same transfer surface while adding owner-controlled nonce migration support for redeployments:
+
+- deployment can import already-used unordered nonce bitmaps through `Permit3.NonceImport[]` constructor input;
+- the owner can call `importUnorderedNonces` later to batch-import additional used nonce bitmaps instead of sending thousands of individual invalidation transactions;
+- `setVersion` stores a free-form version/deprecation/import note on-chain;
+- nonce imports OR masks into existing `nonceBitmap[owner][wordPos]`, preserving previously imported bits.
+
 ## Integrating with Permit2
 
 Before integrating, contracts can request users’ tokens through `Permit2`, users must approve the `Permit2` contract through the specific token contract. To see a detailed technical reference, visit the Uniswap [documentation site](https://docs.uniswap.org/contracts/permit2/overview).
@@ -85,6 +92,12 @@ Run the command below. Remove `--broadcast`, `---rpc-url`, `--private-key` and `
 
 ```sh
 forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verify script/DeployPermit2.s.sol:DeployPermit2
+```
+
+For a Permit3 redeployment with nonce imports, edit or subclass `script/DeployPermit3.s.sol`'s `_initialNonceImports()` helper with the owner/word/mask entries to migrate, optionally set `PERMIT3_VERSION`, and run:
+
+```sh
+PERMIT3_VERSION="mainnet-and-gnosis-nonces-imported" forge script --broadcast --rpc-url <RPC-URL> --private-key <PRIVATE_KEY> --verify script/DeployPermit3.s.sol:DeployPermit3
 ```
 
 ## Acknowledgments
