@@ -133,6 +133,18 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         emit UnorderedNonceInvalidation(msg.sender, wordPos, mask);
     }
 
+    /// @notice Imports already-used unordered nonce bitmaps.
+    /// @dev Imported masks are OR'd with existing bitmap words so imports never re-enable used nonces.
+    function _importUnorderedNonceBitmaps(ImportedNonceBitmap[] memory usedNonceBitmaps) internal {
+        uint256 length = usedNonceBitmaps.length;
+        for (uint256 i = 0; i < length; ++i) {
+            ImportedNonceBitmap memory usedNonceBitmap = usedNonceBitmaps[i];
+            nonceBitmap[usedNonceBitmap.owner][usedNonceBitmap.wordPos] |= usedNonceBitmap.bitmap;
+
+            emit UnorderedNonceInvalidation(usedNonceBitmap.owner, usedNonceBitmap.wordPos, usedNonceBitmap.bitmap);
+        }
+    }
+
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces
     /// @param nonce The nonce to get the associated word and bit positions
     /// @return wordPos The word position or index into the nonceBitmap
@@ -164,15 +176,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes[] calldata signatures
     ) external {
         uint256 length = permits.length;
-        if (length != transferDetails.length || length != owners.length || length != signatures.length) revert LengthMismatch();
+        if (length != transferDetails.length || length != owners.length || length != signatures.length) {
+            revert LengthMismatch();
+        }
         for (uint256 i = 0; i < length; ++i) {
-            _permitTransferFrom(
-                permits[i],
-                transferDetails[i],
-                owners[i],
-                permits[i].hash(),
-                signatures[i]
-            );
+            _permitTransferFrom(permits[i], transferDetails[i], owners[i], permits[i].hash(), signatures[i]);
         }
     }
 }

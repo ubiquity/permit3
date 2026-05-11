@@ -5,7 +5,7 @@ import {IEIP712} from "./IEIP712.sol";
 
 /// @title SignatureTransfer
 /// @notice Handles ERC20 token transfers through signature based actions
-/// @dev Requires user's token approval on the Permit2 contract
+/// @dev Requires user's token approval on the Permit3 contract
 interface ISignatureTransfer is IEIP712 {
     /// @notice Thrown when the requested amount for a transfer is larger than the permissioned amount
     /// @param maxAmount The maximum amount a spender can request to transfer
@@ -17,6 +17,16 @@ interface ISignatureTransfer is IEIP712 {
 
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event UnorderedNonceInvalidation(address indexed owner, uint256 word, uint256 mask);
+
+    /// @notice Data used to pre-load or batch import already-used unordered nonce bitmaps.
+    /// @param owner The token owner whose unordered nonce bitmap is being imported.
+    /// @param wordPos The bitmap word position to import.
+    /// @param bitmap A mask of already-used unordered nonces for the owner and word position.
+    struct ImportedNonceBitmap {
+        address owner;
+        uint256 wordPos;
+        uint256 bitmap;
+    }
 
     /// @notice The token and amount details for a transfer signed in the permit transfer signature
     struct TokenPermissions {
@@ -131,6 +141,11 @@ interface ISignatureTransfer is IEIP712 {
     /// @param wordPos A number to index the nonceBitmap at
     /// @param mask A bitmap masked against msg.sender's current bitmap at the word position
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external;
+
+    /// @notice Owner-only batch import of already-used unordered nonce bitmaps.
+    /// @dev Imported masks are OR'd with existing bitmap words so imports never re-enable used nonces.
+    /// @param usedNonceBitmaps Array of owner/word/bitmap entries to import.
+    function importUnorderedNonceBitmaps(ImportedNonceBitmap[] calldata usedNonceBitmaps) external;
 
     /// @notice Batch transfer: transfers tokens using multiple single-token permits and provided transfer details
     /// @param permits Array of single-token permits
