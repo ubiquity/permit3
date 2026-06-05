@@ -18,6 +18,12 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
+    struct NonceBitmapImport {
+        address owner;
+        uint256 wordPos;
+        uint256 mask;
+    }
+
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
         PermitTransferFrom memory permit,
@@ -133,6 +139,15 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         emit UnorderedNonceInvalidation(msg.sender, wordPos, mask);
     }
 
+    function _importUnorderedNonces(NonceBitmapImport[] memory imports) internal {
+        uint256 length = imports.length;
+        for (uint256 i = 0; i < length; ++i) {
+            NonceBitmapImport memory nonceImport = imports[i];
+            nonceBitmap[nonceImport.owner][nonceImport.wordPos] |= nonceImport.mask;
+            emit UnorderedNonceInvalidation(nonceImport.owner, nonceImport.wordPos, nonceImport.mask);
+        }
+    }
+
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces
     /// @param nonce The nonce to get the associated word and bit positions
     /// @return wordPos The word position or index into the nonceBitmap
@@ -164,15 +179,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes[] calldata signatures
     ) external {
         uint256 length = permits.length;
-        if (length != transferDetails.length || length != owners.length || length != signatures.length) revert LengthMismatch();
+        if (length != transferDetails.length || length != owners.length || length != signatures.length) {
+            revert LengthMismatch();
+        }
         for (uint256 i = 0; i < length; ++i) {
-            _permitTransferFrom(
-                permits[i],
-                transferDetails[i],
-                owners[i],
-                permits[i].hash(),
-                signatures[i]
-            );
+            _permitTransferFrom(permits[i], transferDetails[i], owners[i], permits[i].hash(), signatures[i]);
         }
     }
 }
