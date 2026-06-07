@@ -109,6 +109,24 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         assertEq(token0.balanceOf(address2), startBalanceTo + defaultAmount);
     }
 
+    function testPermitTransferFromPreservesPermit2DomainCompatibility() public {
+        uint256 nonce = 0;
+        bytes32 permit2DomainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
+                keccak256("Permit2"),
+                block.chainid,
+                address(permit2)
+            )
+        );
+        ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, permit2DomainSeparator);
+
+        ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
+
+        permit2.permitTransferFrom(permit, transferDetails, from, sig);
+    }
+
     function testPermitTransferFromCompactSig() public {
         uint256 nonce = 0;
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token0), nonce);
