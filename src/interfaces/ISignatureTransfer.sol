@@ -18,6 +18,28 @@ interface ISignatureTransfer is IEIP712 {
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event UnorderedNonceInvalidation(address indexed owner, uint256 word, uint256 mask);
 
+    /// @notice Emits an event when the importer marks unordered nonce bits for an owner.
+    event UnorderedNonceImport(address indexed importer, address indexed owner, uint256 word, uint256 mask);
+
+    /// @notice Emits an event when the importer role is transferred.
+    event NonceImporterTransferred(address indexed oldImporter, address indexed newImporter);
+
+    /// @notice Emits an event when the deployment version note changes.
+    event VersionNoteUpdated(string versionNote);
+
+    /// @notice Thrown when a caller is not allowed to import nonce bitmaps.
+    error UnauthorizedNonceImporter();
+
+    /// @notice Thrown when attempting to transfer the nonce importer role to address zero.
+    error InvalidNonceImporter();
+
+    /// @notice A bitmap import for an owner's unordered nonce word.
+    struct NonceImport {
+        address owner;
+        uint256 word;
+        uint256 mask;
+    }
+
     /// @notice The token and amount details for a transfer signed in the permit transfer signature
     struct TokenPermissions {
         // ERC20 token address
@@ -131,6 +153,19 @@ interface ISignatureTransfer is IEIP712 {
     /// @param wordPos A number to index the nonceBitmap at
     /// @param mask A bitmap masked against msg.sender's current bitmap at the word position
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external;
+
+    /// @notice Imports multiple nonce bitmaps for migration or recovery.
+    /// @dev Only the nonce importer can import nonces for arbitrary owners.
+    /// @param imports Array of owner/word/mask bitmap imports
+    function importUnorderedNonces(NonceImport[] calldata imports) external;
+
+    /// @notice Updates the account allowed to import nonce bitmaps and set version notes.
+    /// @param newImporter The new nonce importer address
+    function transferNonceImporter(address newImporter) external;
+
+    /// @notice Sets a human-readable version or migration note.
+    /// @param newVersionNote The new version note
+    function setVersionNote(string calldata newVersionNote) external;
 
     /// @notice Batch transfer: transfers tokens using multiple single-token permits and provided transfer details
     /// @param permits Array of single-token permits

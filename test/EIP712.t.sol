@@ -8,7 +8,7 @@ import {Permit2} from "../src/Permit2.sol";
 contract EIP712Test is Test {
     bytes32 private constant TYPE_HASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
-    bytes32 private constant NAME_HASH = keccak256("Permit2");
+    bytes32 private constant NAME_HASH = keccak256("Permit3");
 
     Permit2 permit2;
 

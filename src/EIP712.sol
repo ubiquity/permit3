@@ -12,7 +12,7 @@ contract EIP712 is IEIP712 {
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
     uint256 private immutable _CACHED_CHAIN_ID;
 
-    bytes32 private constant _HASHED_NAME = keccak256("Permit2");
+    bytes32 private constant _HASHED_NAME = keccak256("Permit3");
     bytes32 private constant _TYPE_HASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
@@ -24,9 +24,10 @@ contract EIP712 is IEIP712 {
     /// @notice Returns the domain separator for the current chain.
     /// @dev Uses cached version if chainid and address are unchanged from construction.
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
-        return block.chainid == _CACHED_CHAIN_ID
-            ? _CACHED_DOMAIN_SEPARATOR
-            : _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
+        return
+            block.chainid == _CACHED_CHAIN_ID
+                ? _CACHED_DOMAIN_SEPARATOR
+                : _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
     }
 
     /// @notice Builds a domain separator using the current chainId and contract address.

@@ -18,6 +18,22 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
     /// @inheritdoc ISignatureTransfer
     mapping(address => mapping(uint256 => uint256)) public nonceBitmap;
 
+    /// @notice Account allowed to import nonce bitmaps and update version notes.
+    address public nonceImporter;
+
+    /// @notice Human-readable deployment or migration note.
+    string public versionNote;
+
+    constructor(NonceImport[] memory importedNonces, string memory initialVersionNote) {
+        nonceImporter = msg.sender;
+        versionNote = initialVersionNote;
+
+        emit NonceImporterTransferred(address(0), msg.sender);
+        emit VersionNoteUpdated(initialVersionNote);
+
+        _importUnorderedNonces(importedNonces);
+    }
+
     /// @inheritdoc ISignatureTransfer
     function permitTransferFrom(
         PermitTransferFrom memory permit,
@@ -133,6 +149,46 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         emit UnorderedNonceInvalidation(msg.sender, wordPos, mask);
     }
 
+    /// @inheritdoc ISignatureTransfer
+    function importUnorderedNonces(NonceImport[] calldata imports) external {
+        if (msg.sender != nonceImporter) revert UnauthorizedNonceImporter();
+
+        _importUnorderedNonces(imports);
+    }
+
+    /// @inheritdoc ISignatureTransfer
+    function transferNonceImporter(address newImporter) external {
+        if (msg.sender != nonceImporter) revert UnauthorizedNonceImporter();
+        if (newImporter == address(0)) revert InvalidNonceImporter();
+
+        address oldImporter = nonceImporter;
+        nonceImporter = newImporter;
+
+        emit NonceImporterTransferred(oldImporter, newImporter);
+    }
+
+    /// @inheritdoc ISignatureTransfer
+    function setVersionNote(string calldata newVersionNote) external {
+        if (msg.sender != nonceImporter) revert UnauthorizedNonceImporter();
+
+        versionNote = newVersionNote;
+
+        emit VersionNoteUpdated(newVersionNote);
+    }
+
+    function _importUnorderedNonces(NonceImport[] memory imports) private {
+        uint256 length = imports.length;
+
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                NonceImport memory nonceImport = imports[i];
+                nonceBitmap[nonceImport.owner][nonceImport.word] |= nonceImport.mask;
+
+                emit UnorderedNonceImport(msg.sender, nonceImport.owner, nonceImport.word, nonceImport.mask);
+            }
+        }
+    }
+
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces
     /// @param nonce The nonce to get the associated word and bit positions
     /// @return wordPos The word position or index into the nonceBitmap
@@ -164,15 +220,11 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         bytes[] calldata signatures
     ) external {
         uint256 length = permits.length;
-        if (length != transferDetails.length || length != owners.length || length != signatures.length) revert LengthMismatch();
+        if (length != transferDetails.length || length != owners.length || length != signatures.length) {
+            revert LengthMismatch();
+        }
         for (uint256 i = 0; i < length; ++i) {
-            _permitTransferFrom(
-                permits[i],
-                transferDetails[i],
-                owners[i],
-                permits[i].hash(),
-                signatures[i]
-            );
+            _permitTransferFrom(permits[i], transferDetails[i], owners[i], permits[i].hash(), signatures[i]);
         }
     }
 }

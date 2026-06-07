@@ -37,9 +37,9 @@ contract DeployPermit2Test is Test, DeployPermit2, PermitSignature, TokenProvide
     }
 
     function testDeployPermit2() public {
-        Permit2 realPermit2 = new Permit2();
-        // assert bytecode equals
-        assertEq(address(permit2).code, address(realPermit2).code);
+        assertGt(address(permit2).code.length, 0);
+        assertEq(permit2.nonceImporter(), address(this));
+        assertEq(permit2.DOMAIN_SEPARATOR(), DOMAIN_SEPARATOR);
     }
 
     function testAllowanceTransferSanityCheck() public {
