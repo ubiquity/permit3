@@ -9,3 +9,6 @@ error SignatureExpired(uint256 signatureDeadline);
 
 /// @notice Thrown when validating that the inputted nonce has not been used
 error InvalidNonce();
+
+/// @notice Thrown when an account tries to import nonce bitmap words for another owner.
+error UnauthorizedNonceImport();

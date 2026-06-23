@@ -18,6 +18,19 @@ interface ISignatureTransfer is IEIP712 {
     /// @notice Emits an event when the owner successfully invalidates an unordered nonce.
     event UnorderedNonceInvalidation(address indexed owner, uint256 word, uint256 mask);
 
+    /// @notice Emits an event when unordered nonce words are imported for an owner.
+    event UnorderedNonceImport(address indexed owner, uint256 indexed word, uint256 mask);
+
+    /// @notice A nonce bitmap word to import for an owner.
+    struct NonceImport {
+        // the owner whose used nonces are being imported
+        address owner;
+        // a number to index the nonceBitmap at
+        uint256 wordPos;
+        // a bitmap masked against the owner's current bitmap at the word position
+        uint256 mask;
+    }
+
     /// @notice The token and amount details for a transfer signed in the permit transfer signature
     struct TokenPermissions {
         // ERC20 token address
@@ -131,6 +144,20 @@ interface ISignatureTransfer is IEIP712 {
     /// @param wordPos A number to index the nonceBitmap at
     /// @param mask A bitmap masked against msg.sender's current bitmap at the word position
     function invalidateUnorderedNonces(uint256 wordPos, uint256 mask) external;
+
+    /// @notice Imports unordered nonce bitmap words for one or more owners.
+    /// @dev Intended for deployment-time migrations and later batched nonce imports.
+    /// @param imports The owner, word position, and bitmap mask tuples to import
+    function importUnorderedNonces(NonceImport[] calldata imports) external;
+
+    /// @notice Reads multiple unordered nonce bitmap words in one call.
+    /// @param owners Owners whose nonce bitmap words should be read
+    /// @param wordPositions Word positions to read, parallel to owners
+    /// @return bitmaps Bitmap words corresponding to the provided owner/word pairs
+    function nonceBitmapBatch(address[] calldata owners, uint256[] calldata wordPositions)
+        external
+        view
+        returns (uint256[] memory bitmaps);
 
     /// @notice Batch transfer: transfers tokens using multiple single-token permits and provided transfer details
     /// @param permits Array of single-token permits

@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {ISignatureTransfer} from "./interfaces/ISignatureTransfer.sol";
-import {SignatureExpired, InvalidNonce} from "./PermitErrors.sol";
+import {SignatureExpired, InvalidNonce, UnauthorizedNonceImport} from "./PermitErrors.sol";
 import {ERC20} from "solmate/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 import {SignatureVerification} from "./libraries/SignatureVerification.sol";
@@ -131,6 +131,64 @@ contract SignatureTransfer is ISignatureTransfer, EIP712 {
         nonceBitmap[msg.sender][wordPos] |= mask;
 
         emit UnorderedNonceInvalidation(msg.sender, wordPos, mask);
+    }
+
+    /// @inheritdoc ISignatureTransfer
+    function importUnorderedNonces(NonceImport[] calldata imports) external {
+        uint256 length = imports.length;
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                NonceImport calldata nonceImport = imports[i];
+                _importUnorderedNonce(nonceImport.owner, nonceImport.wordPos, nonceImport.mask, true);
+            }
+        }
+    }
+
+    /// @notice Imports unordered nonce words during construction without msg.sender ownership checks.
+    /// @param imports The owner, word position, and bitmap mask tuples to import
+    function _importUnorderedNoncesOnDeployment(NonceImport[] memory imports) internal {
+        uint256 length = imports.length;
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                NonceImport memory nonceImport = imports[i];
+                _importUnorderedNonce(nonceImport.owner, nonceImport.wordPos, nonceImport.mask, false);
+            }
+        }
+    }
+
+    /// @notice Imports a single unordered nonce bitmap word.
+    /// @param owner Owner whose nonce word is imported
+    /// @param wordPos Word position to import
+    /// @param mask Bitmap mask to mark as used
+    /// @param requireAuthorization Whether the import must be authorized for msg.sender
+    function _importUnorderedNonce(address owner, uint256 wordPos, uint256 mask, bool requireAuthorization) private {
+        if (requireAuthorization && !_canImportUnorderedNonces(owner)) revert UnauthorizedNonceImport();
+
+        nonceBitmap[owner][wordPos] |= mask;
+        emit UnorderedNonceImport(owner, wordPos, mask);
+    }
+
+    /// @notice Returns whether msg.sender can import unordered nonce words for owner.
+    /// @dev Permit2-compatible default requires users to import their own nonce words.
+    function _canImportUnorderedNonces(address owner) internal view virtual returns (bool) {
+        return owner == msg.sender;
+    }
+
+    /// @inheritdoc ISignatureTransfer
+    function nonceBitmapBatch(address[] calldata owners, uint256[] calldata wordPositions)
+        external
+        view
+        returns (uint256[] memory bitmaps)
+    {
+        uint256 length = owners.length;
+        if (length != wordPositions.length) revert LengthMismatch();
+
+        bitmaps = new uint256[](length);
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                bitmaps[i] = nonceBitmap[owners[i]][wordPositions[i]];
+            }
+        }
     }
 
     /// @notice Returns the index of the bitmap and the bit position within the bitmap. Used for unordered nonces
