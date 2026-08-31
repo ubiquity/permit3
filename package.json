@@ -12,5 +12,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Uniswap/permit2.git"
+  },
+  "scripts": {
+    "build": "bash scripts/forge.sh build --sizes",
+    "test": "bash scripts/forge.sh test --no-match-contract DeployPermit2Test",
+    "lint": "bash scripts/forge.sh fmt --check"
   }
 }
