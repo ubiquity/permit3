@@ -11,12 +11,13 @@ contract EIP712 is IEIP712 {
     // corresponds to, in order to invalidate the cached domain separator if the chain id changes.
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
     uint256 private immutable _CACHED_CHAIN_ID;
+    bytes32 private immutable _HASHED_NAME;
 
-    bytes32 private constant _HASHED_NAME = keccak256("Permit2");
     bytes32 private constant _TYPE_HASH =
         keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    constructor() {
+    constructor(string memory name) {
+        _HASHED_NAME = keccak256(bytes(name));
         _CACHED_CHAIN_ID = block.chainid;
         _CACHED_DOMAIN_SEPARATOR = _buildDomainSeparator(_TYPE_HASH, _HASHED_NAME);
     }

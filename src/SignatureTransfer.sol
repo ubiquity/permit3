@@ -9,7 +9,7 @@ import {SignatureVerification} from "./libraries/SignatureVerification.sol";
 import {PermitHash} from "./libraries/PermitHash.sol";
 import {EIP712} from "./EIP712.sol";
 
-contract SignatureTransfer is ISignatureTransfer, EIP712 {
+abstract contract SignatureTransfer is ISignatureTransfer, EIP712 {
     using SignatureVerification for bytes;
     using SafeTransferLib for ERC20;
     using PermitHash for PermitTransferFrom;
